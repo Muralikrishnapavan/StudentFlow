@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - echo "Installing StudentFlow dependencies..."
+      - cd backend && npm ci
+      - cd ../frontend && npm ci
+      - cd ..
+
+  pre_build:
+    commands:
+      - echo "Running backend tests..."
+      - cd backend && npm test
+      - cd ..
+
+  build:
+    commands:
+      - echo "Building StudentFlow frontend..."
+      - cd frontend && npm run build
+      - cd ..
+
+  post_build:
+    commands:
+      - echo "StudentFlow CI build completed successfully."
