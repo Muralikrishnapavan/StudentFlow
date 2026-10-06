@@ -1,0 +1,27 @@
+{
+  "name": "studentflow",
+  "version": "1.0.0",
+  "description": "StudentFlow — Cloud-Based Student Productivity & Task Management System",
+  "scripts": {
+    "start:backend": "npm --prefix backend start",
+    "start:frontend": "npm --prefix frontend start",
+    "test:automation": "node --test aws/lambda/automation/test/automation.test.js",
+    "test:api": "node --test backend/test/api.test.js",
+    "test:all": "node --test aws/lambda/automation/test/automation.test.js backend/test/api.test.js",
+    "automation:local": "node backend/scripts/runLocalAutomation.js",
+    "package:lambda": "node aws/scripts/package-lambda.js",
+    "package:api": "node aws/scripts/package-api-lambda.js",
+    "validate:template": "node aws/scripts/validate-template.js"
+  },
+  "keywords": [
+    "studentflow",
+    "react",
+    "nodejs",
+    "express",
+    "aws",
+    "lambda",
+    "dynamodb"
+  ],
+  "author": "StudentFlow DevOps Team",
+  "license": "ISC"
+}

@@ -1,0 +1,32 @@
+{
+  "name": "studentflow-api-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda HTTP API for StudentFlow: auth, task management, and DynamoDB persistence adapted from Express via serverless-http",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test ../../../backend/test/api.test.js",
+    "package": "node ../../scripts/package-api-lambda.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1146.0",
+    "@aws-sdk/lib-dynamodb": "^3.1146.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "serverless-http": "^4.0.0",
+    "uuid": "^9.0.0"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "api-gateway",
+    "dynamodb",
+    "express",
+    "serverless-http",
+    "studentflow"
+  ],
+  "author": "StudentFlow DevOps Team",
+  "license": "ISC"
+}

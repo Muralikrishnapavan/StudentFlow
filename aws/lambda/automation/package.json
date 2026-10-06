@@ -1,0 +1,26 @@
+{
+  "name": "studentflow-automation-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda automation function for StudentFlow: overdue task marking, 24h reminders via SNS, and user productivity calculation in DynamoDB",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test test/automation.test.js",
+    "package": "node ../../scripts/package-lambda.js",
+    "validate": "node ../../scripts/validate-template.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "@aws-sdk/client-sns": "^3.600.0"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "dynamodb",
+    "sns",
+    "eventbridge",
+    "studentflow"
+  ],
+  "author": "StudentFlow DevOps Team",
+  "license": "ISC"
+}

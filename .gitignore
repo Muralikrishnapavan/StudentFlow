@@ -1,0 +1,40 @@
+# Node modules — never commit these
+node_modules/
+*/node_modules/
+**/node_modules/
+
+# Environment variables — keep secrets safe
+.env
+backend/.env
+
+# Build output
+frontend/build/
+
+# JSON data files — these are local data, not code
+backend/data/users.json
+backend/data/tasks.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+# AWS Lambda deployment packages
+aws/dist/
+
+# All environment files
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.pyc
+# AWS Lambda deployment ZIP files
+aws/lambda/*.zip
+aws/dist/

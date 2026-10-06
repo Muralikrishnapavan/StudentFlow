@@ -1,0 +1,202 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  StudentFlow AWS Automation Stack (100% AWS Free Tier Compliant)
+  Deploys DynamoDB tables, SNS topic, Automation Lambda, Amazon EventBridge Rule (AWS::Events::Rule),
+  and least-privilege IAM roles.
+
+Parameters:
+  TasksTableName:
+    Type: String
+    Default: StudentFlow-Tasks
+    Description: DynamoDB table name for student tasks
+  UsersTableName:
+    Type: String
+    Default: StudentFlow-Users
+    Description: DynamoDB table name for student user profiles
+  ScheduleRate:
+    Type: String
+    Default: 'rate(1 hour)'
+    Description: >
+      Schedule expression for the Amazon EventBridge Rule (AWS::Events::Rule),
+      e.g. rate(1 hour) or cron(0 * * * ? *)
+
+Resources:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. DynamoDB Tables (Partition Key: id [String], Free Tier Eligible)
+  # ───────────────────────────────────────────────────────────────────────────
+  TasksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TasksTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      Tags:
+        - Key: Project
+          Value: StudentFlow
+        - Key: Environment
+          Value: Production
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref UsersTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+      Tags:
+        - Key: Project
+          Value: StudentFlow
+        - Key: Environment
+          Value: Production
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. Amazon SNS Notification Topic
+  # ───────────────────────────────────────────────────────────────────────────
+  ReminderTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: StudentFlow-TaskReminders
+      DisplayName: StudentFlow Task Reminders
+      Tags:
+        - Key: Project
+          Value: StudentFlow
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 3. CloudWatch Log Group with 14-day retention (Keeps storage inside Free Tier)
+  # ───────────────────────────────────────────────────────────────────────────
+  AutomationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/StudentFlow-Automation
+      RetentionInDays: 14
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 4. IAM Execution Role (Least-Privilege Principle)
+  # ───────────────────────────────────────────────────────────────────────────
+  AutomationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: StudentFlow-Automation-LambdaRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: StudentFlowDynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Scan
+                  - dynamodb:UpdateItem
+                  - dynamodb:GetItem
+                Resource:
+                  - !GetAtt TasksTable.Arn
+                  - !GetAtt UsersTable.Arn
+        - PolicyName: StudentFlowSNSPublishAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource:
+                  - !Ref ReminderTopic
+        - PolicyName: StudentFlowCloudWatchLogsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !GetAtt AutomationLogGroup.Arn
+                  - !Sub '${AutomationLogGroup.Arn}:*'
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 5. AWS Lambda Function
+  # ───────────────────────────────────────────────────────────────────────────
+  AutomationLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: StudentFlow-Automation
+      Description: Periodically marks overdue tasks, sends 24h reminders via SNS, and calculates user productivity
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt AutomationLambdaRole.Arn
+      Timeout: 60
+      MemorySize: 128
+      Environment:
+        Variables:
+          TASKS_TABLE: !Ref TasksTable
+          USERS_TABLE: !Ref UsersTable
+          SNS_TOPIC_ARN: !Ref ReminderTopic
+      # Directory containing index.js, package.json, and node_modules (AWS SDK v3 dependencies).
+      # When deployed using 'aws cloudformation package', the AWS CLI automatically zips this
+      # directory (including all production dependencies) and uploads the archive to S3.
+      Code: ../lambda/automation
+      Tags:
+        - Key: Project
+          Value: StudentFlow
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 6. Amazon EventBridge Rule (AWS::Events::Rule - Recurring Hourly Trigger)
+  # ───────────────────────────────────────────────────────────────────────────
+  ScheduledAutomationRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: StudentFlow-HourlyAutomationTrigger
+      Description: >
+        Amazon EventBridge Rule (AWS::Events::Rule) that triggers the StudentFlow Automation
+        Lambda on a scheduled hourly basis
+      ScheduleExpression: !Ref ScheduleRate
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt AutomationLambdaFunction.Arn
+          Id: StudentFlowAutomationTarget
+
+  # Permission allowing Amazon EventBridge (events.amazonaws.com) to invoke the Lambda function
+  EventBridgeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AutomationLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScheduledAutomationRule.Arn
+
+Outputs:
+  TasksTableName:
+    Description: Name of the Tasks DynamoDB table
+    Value: !Ref TasksTable
+  UsersTableName:
+    Description: Name of the Users DynamoDB table
+    Value: !Ref UsersTable
+  ReminderTopicArn:
+    Description: ARN of the SNS Topic for email/SMS subscriptions
+    Value: !Ref ReminderTopic
+  LambdaFunctionArn:
+    Description: ARN of the Automation Lambda Function
+    Value: !GetAtt AutomationLambdaFunction.Arn
+  EventBridgeRuleArn:
+    Description: ARN of the Amazon EventBridge Rule (AWS::Events::Rule)
+    Value: !GetAtt ScheduledAutomationRule.Arn
