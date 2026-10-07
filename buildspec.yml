@@ -13,6 +13,10 @@ phases:
 
   pre_build:
     commands:
+      - echo "Preparing clean test database..."
+      - mkdir -p backend/data
+      - printf '[]' > backend/data/users.json
+      - printf '[]' > backend/data/tasks.json
       - echo "Running backend tests..."
       - cd backend && npm test
       - cd ..
