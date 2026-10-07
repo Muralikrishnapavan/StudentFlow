@@ -256,3 +256,4 @@ npm run automation:local
 
 Built for the Agile Development Process and DevOps course.
 
+<!-- StudentFlow CI/CD pipeline verification -->
